@@ -8,6 +8,7 @@ import {
   getSdkStatus,
   openHealthConnectDataManagement,
 } from 'react-native-health-connect';
+import type { Permission } from 'react-native-health-connect';
 
 const MIN_STEP_DIFF = 20;
 const MIN_TIME_DIFF = 30000;
@@ -16,20 +17,19 @@ export const useStepTracker = () => {
   const lastSyncedSteps = useRef(0);
   const lastSyncTime = useRef(0);
 
-  const [healthConnectStatus, setHealthConnectStatus] = useState(null);
-  const [permissionResult, setPermissionResult] = useState([]);
-  const [grantedPermissions, setGrantedPermissions] = useState([]);
+  const [healthConnectStatus, setHealthConnectStatus] = useState<string | null>(null);
+  const [grantedPermissions, setGrantedPermissions] = useState<any[]>([]);
   const [totalSteps, setTotalSteps] = useState(0);
-  const [healthConnectError, setHealthConnectError] = useState(null);
+  const [healthConnectError, setHealthConnectError] = useState<string | null>(null);
 
-  const shouldSync = steps => {
+  const shouldSync = (steps: number) => {
     const now = Date.now();
     if (steps - lastSyncedSteps.current >= MIN_STEP_DIFF) return true;
     if (now - lastSyncTime.current >= MIN_TIME_DIFF) return true;
     return false;
   };
 
-  const syncSteps = async steps => {
+  const syncSteps = async (steps: number) => {
     try {
       const now = new Date();
 
@@ -45,9 +45,16 @@ export const useStepTracker = () => {
 
       await fetch('https://rewardplanners.com/api/crm/v1/steps/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${your_token_here}`,
+        },
         body: JSON.stringify(payload),
       });
+
+      // Update refs after successful sync
+      lastSyncedSteps.current = steps;
+      lastSyncTime.current = Date.now();
     } catch (e) {
       console.log('Sync failed:', e);
     }
@@ -73,9 +80,9 @@ export const useStepTracker = () => {
       setTotalSteps(steps);
 
       if (shouldSync(steps)) {
-        syncSteps(steps);
+        await syncSteps(steps);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.log('Read error:', err);
       setHealthConnectError(err?.message || String(err));
     }
@@ -104,23 +111,21 @@ export const useStepTracker = () => {
 
       const granted = await getGrantedPermissions();
       console.log('Granted permissions:', granted);
-
       setGrantedPermissions(granted);
 
-      // ✅ Only clear error if permission exists
       if (granted.length > 0) {
         setHealthConnectError(null);
       }
 
       return granted;
-    } catch (err) {
+    } catch (err: any) {
       console.log('Status error:', err);
       setHealthConnectError(err?.message || String(err));
       return [];
     }
   };
 
-  const hasStepsPermission = permissions => {
+  const hasStepsPermission = (permissions: any[]) => {
     return permissions.some(
       p => p.recordType === 'Steps' && p.accessType === 'read',
     );
@@ -128,9 +133,7 @@ export const useStepTracker = () => {
 
   const refreshStatus = async () => {
     console.log('Refreshing status');
-
     const perms = await checkHealthConnectStatus();
-
     if (hasStepsPermission(perms)) {
       await getStepsFromHealth();
     }
@@ -138,23 +141,18 @@ export const useStepTracker = () => {
 
   const requestStepsPermission = async () => {
     try {
-      console.log(' Starting permission flow');
+      console.log('Starting permission flow');
 
-      const permissions = [{ accessType: 'read', recordType: 'Steps' }];
+      // FIX 2: Typed as Permission[] so 'read' is treated as literal not string
+      const permissions: Permission[] = [{ accessType: 'read', recordType: 'Steps' }];
 
-      //  STEP 1: CALL PERMISSION
       await requestPermission(permissions);
 
-      //  STEP 2: WAIT (VERY IMPORTANT)
-      await new Promise(res => setTimeout(res, 1500));
+      // FIX 1: Added <void> generic to fix res type mismatch
+      await new Promise<void>(res => setTimeout(res, 800));
 
-      //  STEP 3: OPEN HEALTH CONNECT SCREEN
-      openHealthConnectDataManagement();
-
-      //  STEP 4: CHECK AGAIN
       const granted = await getGrantedPermissions();
       console.log('AFTER REQUEST:', granted);
-
       setGrantedPermissions(granted);
 
       if (!hasStepsPermission(granted)) {
@@ -166,9 +164,8 @@ export const useStepTracker = () => {
 
       await getStepsFromHealth();
       setHealthConnectError(null);
-
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.log('Permission error:', err);
       setHealthConnectError(err?.message || String(err));
       return false;
@@ -185,9 +182,7 @@ export const useStepTracker = () => {
     const sub = AppState.addEventListener('change', async state => {
       if (state === 'active') {
         console.log('App resumed');
-
         const perms = await checkHealthConnectStatus();
-
         if (hasStepsPermission(perms)) {
           await getStepsFromHealth();
         }
@@ -199,7 +194,6 @@ export const useStepTracker = () => {
 
   return {
     healthConnectStatus,
-    permissionResult,
     grantedPermissions,
     totalSteps,
     healthConnectError,

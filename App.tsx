@@ -15,7 +15,8 @@ export default function App() {
 
   useEffect(() => {
     console.log('🚀 App Mounted');
-    refreshStatus();
+    // FIX 1: Removed redundant refreshStatus() call here
+    // useStepTracker already calls checkHealthConnectStatus on mount
   }, []);
 
   useEffect(() => {
@@ -31,42 +32,41 @@ export default function App() {
   const handlePrimaryAction = async () => {
     console.log('👉 Button pressed');
 
-    //  Not installed
+    // Not installed
     if (healthConnectStatus === '0') {
       console.log('➡️ Install Health Connect');
-      openHealthConnect('com.google.android.apps.healthdata');
+      openHealthConnect(); // FIX 2: No args — openHealthConnectDataManagement takes none
       return;
     }
 
-    //  Needs setup
+    // Needs setup
     if (healthConnectStatus === '1') {
       console.log('➡️ Open Health Connect setup');
-      openHealthConnect('com.google.android.apps.healthdata');
+      openHealthConnect(); // FIX 2: No args
       return;
     }
 
-    //  YOUR CURRENT STATE (IMPORTANT FIX)
+    // Status 3 — app not registered yet with Health Connect
     if (healthConnectStatus === '3') {
-      console.log(' Forcing permission request (registration step)');
-
+      console.log('➡️ Forcing permission request (registration step)');
       try {
-        await requestStepsPermission(); //  THIS FIXES EVERYTHING
+        await requestStepsPermission();
       } catch (e) {
+        // FIX 2: No args
         console.log('Permission request failed → opening Health Connect');
-        openHealthConnect('com.google.android.apps.healthdata');
+        openHealthConnect();
       }
-
       return;
     }
 
-    //  Permission missing
+    // Status 2 but permission not granted
     if (healthConnectStatus === '2' && grantedPermissions?.length === 0) {
       console.log('➡️ Requesting permission');
       await requestStepsPermission();
       return;
     }
 
-    //  Ready → fetch steps
+    // All good — sync steps
     if (isReady) {
       console.log('➡️ Syncing steps');
       await refreshStatus();
@@ -74,6 +74,7 @@ export default function App() {
   };
 
   const getButtonTitle = () => {
+    if (!healthConnectStatus) return 'Checking...';
     if (healthConnectStatus === '0') return 'Install Health Connect';
     if (healthConnectStatus === '1') return 'Setup Health Connect';
     if (healthConnectStatus === '3') return 'Allow Step Access';
@@ -84,24 +85,16 @@ export default function App() {
   };
 
   const getStatusText = () => {
-    if (healthConnectStatus === '0')
-      return 'Health Connect is not installed.';
-
-    if (healthConnectStatus === '1')
-      return 'Complete Health Connect setup.';
-
+    if (!healthConnectStatus) return 'Checking device...';
+    if (healthConnectStatus === '0') return 'Health Connect is not installed.';
+    if (healthConnectStatus === '1') return 'Complete Health Connect setup.';
     if (healthConnectStatus === '3')
       return 'Tap below to register your app with Health Connect.';
-
     if (healthConnectStatus === '2' && grantedPermissions?.length === 0)
       return 'Permission required to read steps.';
-
     if (isReady && totalSteps === 0)
       return 'No step data found. Make sure a fitness app is connected.';
-
-    if (isReady)
-      return 'Steps synced successfully.';
-
+    if (isReady) return 'Steps synced successfully.';
     return 'Checking device...';
   };
 
@@ -115,17 +108,13 @@ export default function App() {
         backgroundColor: '#fff',
       }}
     >
-      <Text style={{ fontSize: 22, fontWeight: '600' }}>
-        Step Tracker
-      </Text>
+      <Text style={{ fontSize: 22, fontWeight: '600' }}>Step Tracker</Text>
 
       {!healthConnectStatus ? (
         <ActivityIndicator style={{ marginTop: 20 }} />
       ) : (
         <>
-          <Text style={{ fontSize: 36, marginTop: 20 }}>
-            {totalSteps}
-          </Text>
+          <Text style={{ fontSize: 36, marginTop: 20 }}>{totalSteps}</Text>
 
           <Text style={{ color: '#666' }}>steps today</Text>
 
@@ -141,18 +130,13 @@ export default function App() {
           </Text>
 
           <View style={{ width: '100%' }}>
-            <Button
-              title={getButtonTitle()}
-              onPress={handlePrimaryAction}
-            />
+            <Button title={getButtonTitle()} onPress={handlePrimaryAction} />
           </View>
         </>
       )}
 
       {healthConnectError && (
-        <Text style={{ color: 'red', marginTop: 15 }}>
-          {healthConnectError}
-        </Text>
+        <Text style={{ color: 'red', marginTop: 15 }}>{healthConnectError}</Text>
       )}
     </View>
   );
