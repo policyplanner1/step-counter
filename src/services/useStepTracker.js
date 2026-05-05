@@ -22,7 +22,7 @@ export const useStepTracker = () => {
   const [totalSteps, setTotalSteps] = useState(0);
   const [healthConnectError, setHealthConnectError] = useState(null);
 
-  const shouldSync = (steps) => {
+  const shouldSync = steps => {
     const now = Date.now();
 
     if (steps - lastSyncedSteps.current >= MIN_STEP_DIFF) return true;
@@ -31,18 +31,28 @@ export const useStepTracker = () => {
     return false;
   };
 
-  const syncSteps = async (steps) => {
+  const syncSteps = async steps => {
     try {
-      lastSyncedSteps.current = steps;
-      lastSyncTime.current = Date.now();
+      const now = new Date();
 
-      await fetch('http://YOUR_SERVER/steps/sync', {
+      const payload = {
+        steps: steps,
+
+        distance_km: Number((steps * 0.0008).toFixed(2)),
+        calories: Math.round(steps * 0.04),
+        active_minutes: Math.max(1, Math.floor(steps / 1000)),
+
+        date: now.toISOString().split('T')[0],
+      };
+
+      console.log('Sync payload:', payload);
+
+      await fetch('https://rewardplanners.com/api/crm/v1/steps/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sensor_total: steps,
-          timestamp: new Date().toISOString(),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
     } catch (e) {
       console.log('Sync failed:', e);
@@ -84,7 +94,7 @@ export const useStepTracker = () => {
       await initialize();
 
       const sdkStatus = await getSdkStatus(
-        'com.google.android.apps.healthdata'
+        'com.google.android.apps.healthdata',
       );
 
       console.log('Health Connect SDK status:', sdkStatus);
@@ -92,9 +102,7 @@ export const useStepTracker = () => {
 
       // 🚨 CRITICAL CHECK
       if (sdkStatus !== 2) {
-        setHealthConnectError(
-          'Health Connect not installed or not ready'
-        );
+        setHealthConnectError('Health Connect not installed or not ready');
         return [];
       }
 
@@ -113,11 +121,9 @@ export const useStepTracker = () => {
     }
   };
 
-  const hasStepsPermission = (permissions) => {
+  const hasStepsPermission = permissions => {
     return permissions.some(
-      (p) =>
-        p.recordType === 'Steps' &&
-        p.accessType === 'read'
+      p => p.recordType === 'Steps' && p.accessType === 'read',
     );
   };
 
@@ -147,13 +153,13 @@ export const useStepTracker = () => {
 
       if (!hasStepsPermission(permissions)) {
         setHealthConnectError(
-          'Steps permission not granted. Please enable it in Health Connect.'
+          'Steps permission not granted. Please enable it in Health Connect.',
         );
         return false;
       }
 
       //  Important delay (permission propagation fix)
-      await new Promise((res) => setTimeout(res, 1000));
+      await new Promise(res => setTimeout(res, 1000));
 
       await getStepsFromHealth();
 
@@ -173,7 +179,7 @@ export const useStepTracker = () => {
 
     init();
 
-    const sub = AppState.addEventListener('change', async (state) => {
+    const sub = AppState.addEventListener('change', async state => {
       if (state === 'active') {
         console.log('App resumed → refresh');
 
