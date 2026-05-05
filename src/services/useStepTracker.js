@@ -138,39 +138,33 @@ export const useStepTracker = () => {
 
   const requestStepsPermission = async () => {
     try {
-      console.log('Requesting Steps permission');
+      console.log(' Starting permission flow');
 
-      const reqPermissions = [
-        { accessType: 'read', recordType: 'Steps' },
-      ];
+      const permissions = [{ accessType: 'read', recordType: 'Steps' }];
 
-      const result = await requestPermission(reqPermissions);
+      //  STEP 1: CALL PERMISSION
+      await requestPermission(permissions);
 
-      console.log('Permission result:', result);
-      setPermissionResult(result);
+      //  STEP 2: WAIT (VERY IMPORTANT)
+      await new Promise(res => setTimeout(res, 1500));
 
+      //  STEP 3: OPEN HEALTH CONNECT SCREEN
+      openHealthConnectDataManagement();
+
+      //  STEP 4: CHECK AGAIN
       const granted = await getGrantedPermissions();
-      console.log('AFTER REQUEST GRANTED:', granted);
+      console.log('AFTER REQUEST:', granted);
 
       setGrantedPermissions(granted);
 
       if (!hasStepsPermission(granted)) {
-        console.log('❌ Permission not granted → opening Health Connect');
-
         setHealthConnectError(
           'Enable Steps permission in Health Connect → App permissions',
         );
-
-        // 🔥 Force open correct screen
-        openHealthConnectDataManagement();
-
         return false;
       }
 
-      await new Promise(res => setTimeout(res, 1000));
-
       await getStepsFromHealth();
-
       setHealthConnectError(null);
 
       return true;
