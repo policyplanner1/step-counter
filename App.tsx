@@ -1,11 +1,10 @@
-import React from 'react';
-import { View, Text, Button } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, Button, ActivityIndicator } from 'react-native';
 import { useStepTracker } from './src/services/useStepTracker';
 
 export default function App() {
   const {
     healthConnectStatus,
-    permissionResult,
     grantedPermissions,
     totalSteps,
     healthConnectError,
@@ -14,53 +13,100 @@ export default function App() {
     openHealthConnect,
   } = useStepTracker();
 
+  useEffect(() => {
+    refreshStatus();
+  }, []);
+
+  const isReady =
+    healthConnectStatus === '2' && grantedPermissions?.length > 0;
+
+  const handlePrimaryAction = () => {
+    if (healthConnectStatus === '0') {
+      openHealthConnect('com.google.android.apps.healthdata');
+    } else if (healthConnectStatus === '1') {
+      openHealthConnect('com.google.android.apps.healthdata');
+    } else if (
+      healthConnectStatus === '2' &&
+      grantedPermissions?.length === 0
+    ) {
+      requestStepsPermission();
+    } else if (isReady) {
+      refreshStatus();
+    }
+  };
+
+  const getButtonTitle = () => {
+    if (healthConnectStatus === '0') return 'Install Health Connect';
+    if (healthConnectStatus === '1') return 'Open Health Connect';
+    if (healthConnectStatus === '2' && grantedPermissions?.length === 0)
+      return 'Allow Step Access';
+    if (isReady) return 'Sync Steps';
+    return 'Checking...';
+  };
+
+  const getStatusText = () => {
+    if (healthConnectStatus === '0')
+      return 'Health Connect is required.';
+    if (healthConnectStatus === '1')
+      return 'Complete Health Connect setup.';
+    if (healthConnectStatus === '2' && grantedPermissions?.length === 0)
+      return 'Permission required to read steps.';
+    if (isReady && totalSteps === 0)
+      return 'No step data found.';
+    if (isReady) return 'Tracking steps.';
+    return 'Checking device...';
+  };
+
   return (
     <View
       style={{
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 16,
+        padding: 20,
+        backgroundColor: '#fff',
       }}
     >
-      <Text style={{ fontSize: 18, marginBottom: 10 }}>
-        Health Connect debug
+      <Text style={{ fontSize: 22, fontWeight: '600' }}>
+        Step Tracker
       </Text>
 
-      <Text>SDK status: {healthConnectStatus ?? 'unknown'}</Text>
-      <Text>Granted permissions: {grantedPermissions?.length ?? 0}</Text>
-      <Text>Permission result: {JSON.stringify(permissionResult)}</Text>
-      <Text>Steps today: {totalSteps}</Text>
+      {/* ALWAYS render — no early return */}
+      {!healthConnectStatus ? (
+        <ActivityIndicator style={{ marginTop: 20 }} />
+      ) : (
+        <>
+          <Text style={{ fontSize: 36, marginTop: 20 }}>
+            {totalSteps}
+          </Text>
 
-      <View style={{ marginVertical: 16, width: '100%' }}>
-        <Button
-          title="Request Health Connect Steps Permission"
-          onPress={requestStepsPermission}
-        />
-      </View>
+          <Text style={{ color: '#666' }}>steps today</Text>
 
-      <View style={{ marginVertical: 8, width: '100%' }}>
-        <Button title="Refresh Status" onPress={refreshStatus} />
-      </View>
+          <Text
+            style={{
+              marginTop: 20,
+              marginBottom: 20,
+              textAlign: 'center',
+              color: '#555',
+            }}
+          >
+            {getStatusText()}
+          </Text>
 
-      {/* 🔥 IMPORTANT BUTTON */}
-      <Button
-        title="Open Health Connect"
-        onPress={() => openHealthConnect('com.google.android.apps.healthdata')}
-      />
+          <View style={{ width: '100%' }}>
+            <Button
+              title={getButtonTitle()}
+              onPress={handlePrimaryAction}
+            />
+          </View>
+        </>
+      )}
 
-      {grantedPermissions?.length === 0 ? (
-        <Text style={{ marginTop: 10, color: '#555', textAlign: 'center' }}>
-          No Health Connect steps permission granted yet. Tap the button and
-          allow Steps access.
+      {healthConnectError && (
+        <Text style={{ color: 'red', marginTop: 15 }}>
+          {healthConnectError}
         </Text>
-      ) : null}
-
-      {healthConnectError ? (
-        <Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>
-          Error: {healthConnectError}
-        </Text>
-      ) : null}
+      )}
     </View>
   );
 }
