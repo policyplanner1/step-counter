@@ -93,7 +93,8 @@ export const useStepTracker = () => {
       await initialize();
 
       const sdkStatus = await getSdkStatus(
-        'com.google.android.apps.healthdata',
+        'com.google.android.healthconnect.controller',
+        
       );
 
       console.log('SDK STATUS:', sdkStatus);
@@ -141,18 +142,20 @@ export const useStepTracker = () => {
 
   const requestStepsPermission = async () => {
     try {
-      console.log('Starting permission flow');
+      console.log('🔵 STEP 1: Starting permission flow');
 
-      // FIX 2: Typed as Permission[] so 'read' is treated as literal not string
       const permissions: Permission[] = [{ accessType: 'read', recordType: 'Steps' }];
 
-      await requestPermission(permissions);
+      console.log('🔵 STEP 2: Calling requestPermission...');
+      const result = await requestPermission(permissions);
+      console.log('🔵 STEP 3: requestPermission returned:', JSON.stringify(result));
 
-      // FIX 1: Added <void> generic to fix res type mismatch
       await new Promise<void>(res => setTimeout(res, 800));
 
+      console.log('🔵 STEP 4: Calling getGrantedPermissions...');
       const granted = await getGrantedPermissions();
-      console.log('AFTER REQUEST:', granted);
+      console.log('🔵 STEP 5: granted:', JSON.stringify(granted));
+
       setGrantedPermissions(granted);
 
       if (!hasStepsPermission(granted)) {
@@ -166,7 +169,9 @@ export const useStepTracker = () => {
       setHealthConnectError(null);
       return true;
     } catch (err: any) {
-      console.log('Permission error:', err);
+      console.log('🔴 Permission error:', err);
+      console.log('🔴 Error message:', err?.message);
+      console.log('🔴 Error stack:', err?.stack);
       setHealthConnectError(err?.message || String(err));
       return false;
     }

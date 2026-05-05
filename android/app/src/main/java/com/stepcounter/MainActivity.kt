@@ -13,7 +13,10 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    HealthConnectPermissionDelegate.setPermissionDelegate(this)
+    HealthConnectPermissionDelegate.setPermissionDelegate(
+      this,
+      "com.google.android.healthconnect.controller" 
+    )
   }
 
   override fun createReactActivityDelegate(): ReactActivityDelegate =
