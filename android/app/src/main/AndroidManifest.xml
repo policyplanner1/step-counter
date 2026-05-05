@@ -1,6 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
+    
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <!-- Required for Android 11+ -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
 
     <application
       android:name=".MainApplication"
@@ -11,7 +18,13 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
-      <activity
+    
+    <activity
+        android:name="com.google.android.apps.healthdata.permissions.ActivityPermissionRationale"
+        android:exported="true" />
+
+
+    <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

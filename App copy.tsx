@@ -11,55 +11,34 @@ export default function App() {
     healthConnectError,
     requestStepsPermission,
     refreshStatus,
-    openHealthConnect,
   } = useStepTracker();
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-      }}
-    >
-      <Text style={{ fontSize: 18, marginBottom: 10 }}>
-        Health Connect debug
-      </Text>
-
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+      <Text style={{ fontSize: 18, marginBottom: 10 }}>Health Connect debug</Text>
       <Text>SDK status: {healthConnectStatus ?? 'unknown'}</Text>
       <Text>Granted permissions: {grantedPermissions?.length ?? 0}</Text>
       <Text>Permission result: {JSON.stringify(permissionResult)}</Text>
       <Text>Steps today: {totalSteps}</Text>
-
       <View style={{ marginVertical: 16, width: '100%' }}>
         <Button
           title="Request Health Connect Steps Permission"
           onPress={requestStepsPermission}
         />
       </View>
-
       <View style={{ marginVertical: 8, width: '100%' }}>
-        <Button title="Refresh Status" onPress={refreshStatus} />
+        <Button
+          title="Refresh Status"
+          onPress={refreshStatus}
+        />
       </View>
-
-      {/* 🔥 IMPORTANT BUTTON */}
-      <Button
-        title="Open Health Connect"
-        onPress={() => openHealthConnect('com.google.android.apps.healthdata')}
-      />
-
       {grantedPermissions?.length === 0 ? (
         <Text style={{ marginTop: 10, color: '#555', textAlign: 'center' }}>
-          No Health Connect steps permission granted yet. Tap the button and
-          allow Steps access.
+          No Health Connect steps permission granted yet. Tap the button and allow Steps access.
         </Text>
       ) : null}
-
       {healthConnectError ? (
-        <Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>
-          Error: {healthConnectError}
-        </Text>
+        <Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>Error: {healthConnectError}</Text>
       ) : null}
     </View>
   );
