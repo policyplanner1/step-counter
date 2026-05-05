@@ -31,41 +31,42 @@ export default function App() {
   const handlePrimaryAction = async () => {
     console.log('👉 Button pressed');
 
-    // ❌ Not installed
+    //  Not installed
     if (healthConnectStatus === '0') {
       console.log('➡️ Install Health Connect');
       openHealthConnect('com.google.android.apps.healthdata');
       return;
     }
 
-    // ⚠️ Needs setup
+    //  Needs setup
     if (healthConnectStatus === '1') {
       console.log('➡️ Open Health Connect setup');
       openHealthConnect('com.google.android.apps.healthdata');
       return;
     }
 
-    // 🚨 CRITICAL CASE (your current state)
+    //  YOUR CURRENT STATE (IMPORTANT FIX)
     if (healthConnectStatus === '3') {
-      console.log('⚠️ SDK mismatch / incompatible');
+      console.log(' Forcing permission request (registration step)');
 
-      // Force open HC so user can trigger registration
-      openHealthConnect('com.google.android.apps.healthdata');
+      try {
+        await requestStepsPermission(); //  THIS FIXES EVERYTHING
+      } catch (e) {
+        console.log('Permission request failed → opening Health Connect');
+        openHealthConnect('com.google.android.apps.healthdata');
+      }
 
       return;
     }
 
-    // 🔐 Permission missing
-    if (
-      healthConnectStatus === '2' &&
-      grantedPermissions?.length === 0
-    ) {
+    //  Permission missing
+    if (healthConnectStatus === '2' && grantedPermissions?.length === 0) {
       console.log('➡️ Requesting permission');
       await requestStepsPermission();
       return;
     }
 
-    // ✅ Normal flow
+    //  Ready → fetch steps
     if (isReady) {
       console.log('➡️ Syncing steps');
       await refreshStatus();
@@ -75,7 +76,7 @@ export default function App() {
   const getButtonTitle = () => {
     if (healthConnectStatus === '0') return 'Install Health Connect';
     if (healthConnectStatus === '1') return 'Setup Health Connect';
-    if (healthConnectStatus === '3') return 'Open Health Connect';
+    if (healthConnectStatus === '3') return 'Allow Step Access';
     if (healthConnectStatus === '2' && grantedPermissions?.length === 0)
       return 'Allow Step Access';
     if (isReady) return 'Sync Steps';
@@ -90,7 +91,7 @@ export default function App() {
       return 'Complete Health Connect setup.';
 
     if (healthConnectStatus === '3')
-      return 'Health Connect is installed but your app is not yet registered. Open it once.';
+      return 'Tap below to register your app with Health Connect.';
 
     if (healthConnectStatus === '2' && grantedPermissions?.length === 0)
       return 'Permission required to read steps.';
